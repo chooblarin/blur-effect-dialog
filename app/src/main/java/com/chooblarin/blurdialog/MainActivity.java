@@ -1,7 +1,6 @@
 package com.chooblarin.blurdialog;
 
 import android.os.Bundle;
-import android.support.v4.app.FragmentManager;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -18,12 +17,10 @@ public class MainActivity extends ActionBarActivity {
         findViewById(R.id.button_open).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                FragmentManager manager = getSupportFragmentManager();
-                new BlurDialogFragment().show(manager, "dialog");
+                new BlurDialogFragment().fadeIn(MainActivity.this, "dialog");
             }
         });
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

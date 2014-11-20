@@ -1,5 +1,6 @@
 package com.chooblarin.blurdialog;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -11,6 +12,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -21,7 +23,30 @@ import android.view.WindowManager;
  */
 public class BlurDialogFragment extends DialogFragment {
 
-    private Bitmap backgroundBitmap;
+    private Drawable backgroundDrawable;
+
+    public void fadeIn(final FragmentActivity activity, final String tag) {
+        final Bitmap backgroundBitmap = createBackgroundBitmap(activity);
+
+        // create fast blur bitmap and show dialog
+        new AsyncTask<Void, Void, Drawable>() {
+            @Override
+            protected Drawable doInBackground(Void... params) {
+                Bitmap localBitmap = Blur.fastblur(activity, backgroundBitmap, 16);
+                return new BitmapDrawable(activity.getResources(), localBitmap);
+            }
+
+            @Override
+            protected void onPostExecute(Drawable drawable) {
+                backgroundDrawable = drawable;
+                show(activity.getSupportFragmentManager(), tag);
+
+                if (backgroundBitmap != null) {
+                    backgroundBitmap.recycle();
+                }
+            }
+        }.execute();
+    }
 
     @NonNull
     @Override
@@ -30,44 +55,21 @@ public class BlurDialogFragment extends DialogFragment {
         Dialog dialog = new Dialog(getActivity());
         Window window = dialog.getWindow();
 
-        // create bitmap as background
-        View view = getActivity().getWindow().getDecorView();
-        view.setDrawingCacheEnabled(true);
-
-        Bitmap bitmap = view.getDrawingCache();
-        Rect rectgle= new Rect();
-        getActivity().getWindow().getDecorView().getWindowVisibleDisplayFrame(rectgle);
-        int StatusBarHeight = rectgle.top;
-        backgroundBitmap = Bitmap.createBitmap(
-                bitmap, 0, StatusBarHeight, bitmap.getWidth(), bitmap.getHeight() - StatusBarHeight, null, true);
-        view.setDrawingCacheEnabled(false);
-
         // set up dialog
         window.requestFeature(Window.FEATURE_NO_TITLE); // タイトル非表示
         dialog.setContentView(R.layout.fragment_blur);
 
         window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT)); // 背景透明
         window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        window.setBackgroundDrawable(backgroundDrawable);
 
-        // create fast blur bitmap
-        new AsyncTask<Void, Void, Drawable>() {
-            @Override
-            protected Drawable doInBackground(Void... params) {
-                Bitmap localBitmap = Blur.fastblur(getActivity(), backgroundBitmap, 8);
-                return new BitmapDrawable(getActivity().getResources(), localBitmap);
-            }
-
-            @Override
-            protected void onPostExecute(Drawable drawable) {
-                super.onPostExecute(drawable);
-                getDialog().getWindow().setBackgroundDrawable(drawable);
-            }
-        }.execute();
+        window.setWindowAnimations(R.style.BlurDialogTheme);
 
         return dialog;
     }
 
-    @Override public void onStart() {
+    @Override
+    public void onStart() {
         super.onStart();
 
         // no dimmed background
@@ -76,15 +78,20 @@ public class BlurDialogFragment extends DialogFragment {
         windowParams.dimAmount = 0.0f;
         windowParams.flags |= WindowManager.LayoutParams.FLAG_DIM_BEHIND;
         window.setAttributes(windowParams);
-
-        window.setWindowAnimations(R.style.BlurDialogTheme);
     }
 
-    @Override
-    public void onDestroy() {
-        if (backgroundBitmap != null) {
-            backgroundBitmap.recycle();
-        }
-        super.onDestroy();
+    private Bitmap createBackgroundBitmap(Activity activity) {
+        View view = activity.getWindow().getDecorView();
+        view.setDrawingCacheEnabled(true);
+        Bitmap bitmap = view.getDrawingCache();
+
+        Rect rectgle = new Rect();
+        activity.getWindow().getDecorView().getWindowVisibleDisplayFrame(rectgle);
+        int StatusBarHeight = rectgle.top;
+        Bitmap bgBitmap = Bitmap.createBitmap(
+                bitmap, 0, StatusBarHeight, bitmap.getWidth(), bitmap.getHeight() - StatusBarHeight, null, true);
+        view.setDrawingCacheEnabled(false);
+
+        return bgBitmap;
     }
 }

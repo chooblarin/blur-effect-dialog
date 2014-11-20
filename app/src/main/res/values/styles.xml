@@ -6,8 +6,8 @@
     </style>
 
     <style name="BlurDialogTheme" parent="Theme.AppCompat">
-        <item name="android:windowEnterAnimation">@android:anim/fade_in</item>
-        <item name="android:windowExitAnimation">@android:anim/fade_out</item>
+        <item name="android:windowEnterAnimation">@anim/quick_fade_in</item>
+        <item name="android:windowExitAnimation">@anim/quick_fade_out</item>
     </style>
 
 </resources>
