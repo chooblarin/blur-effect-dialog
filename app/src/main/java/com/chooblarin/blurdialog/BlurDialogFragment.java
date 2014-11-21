@@ -2,6 +2,9 @@ package com.chooblarin.blurdialog;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
+import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Rect;
@@ -13,6 +16,8 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
+import android.view.Display;
+import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -83,15 +88,53 @@ public class BlurDialogFragment extends DialogFragment {
     private Bitmap createBackgroundBitmap(Activity activity) {
         View view = activity.getWindow().getDecorView();
         view.setDrawingCacheEnabled(true);
-        Bitmap bitmap = view.getDrawingCache();
+        Bitmap bmp = view.getDrawingCache();
 
-        Rect rectgle = new Rect();
-        activity.getWindow().getDecorView().getWindowVisibleDisplayFrame(rectgle);
-        int StatusBarHeight = rectgle.top;
-        Bitmap bgBitmap = Bitmap.createBitmap(
-                bitmap, 0, StatusBarHeight, bitmap.getWidth(), bitmap.getHeight() - StatusBarHeight, null, true);
+        int orientation = getDisplayOrientation(activity);
+
+        int statusBarHeight = getStatusBarHeight(activity);
+        int navigationBarHeight = getNavigationBarHeight(activity, orientation);
+
+        int width = orientation == Configuration.ORIENTATION_PORTRAIT ?
+                bmp.getWidth() : bmp.getWidth() - navigationBarHeight;
+        int height = orientation == Configuration.ORIENTATION_PORTRAIT ?
+                bmp.getHeight() - statusBarHeight - navigationBarHeight
+                : bmp.getHeight() - statusBarHeight;
+
+        Bitmap bgBitmap = Bitmap.createBitmap(bmp, 0, statusBarHeight, width, height, null, true);
         view.setDrawingCacheEnabled(false);
-
         return bgBitmap;
+    }
+
+    private static int getDisplayOrientation(Context context) {
+        Display display = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+        switch (display.getRotation()) {
+            case Surface.ROTATION_90:
+            case Surface.ROTATION_270:
+                return Configuration.ORIENTATION_LANDSCAPE;
+
+            default:
+                return Configuration.ORIENTATION_PORTRAIT;
+        }
+    }
+
+    private static int getStatusBarHeight(Activity activity) {
+
+        Rect rectangle = new Rect();
+        activity.getWindow().getDecorView().getWindowVisibleDisplayFrame(rectangle);
+        return rectangle.top;
+    }
+
+    private static int getNavigationBarHeight(Context context, int orientation) {
+        Resources resources = context.getResources();
+
+        int id = resources.getIdentifier(
+                orientation == Configuration.ORIENTATION_PORTRAIT
+                        ? "navigation_bar_height" : "navigation_bar_height_landscape",
+                "dimen", "android");
+        if (id > 0) {
+            return resources.getDimensionPixelSize(id);
+        }
+        return 0;
     }
 }
